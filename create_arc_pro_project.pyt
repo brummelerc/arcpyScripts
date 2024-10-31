@@ -23,21 +23,18 @@ class CreateArcProProject:
 
     def getParameterInfo(self):
         """Define the tool parameters."""
-        param0 = arcpy.Parameter(
-            displayName = "Project Name",
-            name = "project_name",
-            datatype = "GPString",
-            direction = "Input",
-        )
+        params = [
+            arcpy.Parameter(displayName = "Project Name",
+                            name = "project_name",
+                            datatype = "GPString",
+                            direction = "Input"),
+            arcpy.Parameter(displayName = "Where to put the Project Directory",
+                            name = "directory",
+                            datatype = "DEFolder",
+                            direction = "Input")
+        ]
 
-        param1 = arcpy.Parameter(
-            displayName = "Where to put the Project Directory",
-            name = "directory",
-            datatype = "DEFolder",
-            direction = "Input",
-        )
-
-        return [param0, param1]
+        return params
 
     def isLicensed(self):
         """Set whether the tool is licensed to execute."""
@@ -57,8 +54,8 @@ class CreateArcProProject:
     def execute(self, parameters, messages):
         """The source code of the tool."""
 
-        project_name = arcpy.GetParameterAsText(0)
-        directory = arcpy.GetParameterAsText(1)
+        project_name = parameters[0].valueAsText
+        directory = parameters[1].valueAsText
             
         #define the destination folder path for the new project
         target_folder = os.path.join(directory, project_name)
