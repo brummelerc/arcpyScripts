@@ -99,7 +99,7 @@ class CreateArcProProject:
         arcpy.mp.CreateProject(aprx_path)
         print(f"Project '{project_name}' created at {aprx_path}")
         
-        return aprx_path
+        return
 
     def postExecute(self, parameters):
         """This method takes place after outputs are processed and
