@@ -31,8 +31,7 @@ class CreateArcProProject:
             arcpy.Parameter(displayName = "Where to put the Project Directory",
                             name = "directory",
                             datatype = "DEFolder",
-                            direction = "Input")
-        ]
+                            direction = "Input")]
 
         return params
 
@@ -57,6 +56,8 @@ class CreateArcProProject:
         import create_arc_pro_project
 
         create_arc_pro_project.execute(parameters[0].valueAsText, parameters[1].valueAsText)
+
+        return
 
     def postExecute(self, parameters):
         """This method takes place after outputs are processed and
