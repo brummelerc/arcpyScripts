@@ -35,14 +35,18 @@ with arcpy.da.SearchCursor(f"{input_gdb}\\{feature_class}", ["OID@", "Feature_Ty
         rounded_scale = math.ceil(original_scale / 1000) * 1000
         new_map_frame.camera.scale = rounded_scale
         
-        #Update the legend label
-        legend_element = new_layout.listElements("LEGEND_ELEMENT")[0]
-        legend_items = legend_element.listLegendItemLayers()
-        for item in legend_items:
-            if item.name == feature_class:
-                item.name = site_name
+         # Get the legend element in the new layout
+        legend_element = new_layout.listElements("LEGEND_ELEMENT")[0]  # Adjust the index or name if needed
+
+        # Iterate through legend items and update the label
+        for legend_item in legend_element.items:
+            if legend_item.name == feature_class:
+                # Update the label to the site name
+                legend_item.text = site_name
+                print(f"Updated legend label for feature class {feature_class} to: {site_name}")
                 break
-        else:
+                
+            else:
                 print(f"Warning: Feature class '{feature_class}' not found in the legend for site {site_name}.")
         
         
