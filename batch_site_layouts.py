@@ -1,0 +1,50 @@
+import arcpy
+import math
+
+#Parameters
+input_gdb = r"T:\1-PROJECTS\Grid_United\505104_Copper_Basin_Transmissions\7-SCRATCH\CB\CB_Scratch.gdb"
+feature_class = "New_Cultural_Areas_2024"
+template_layout_name = 'Site Map Template'
+
+#Reference the project and template layout
+aprx = arcpy.mp.ArcGISProject("CURRENT")
+template_layout = aprx.listLayouts(template_layout_name)[0] #get the template layout
+
+#Get the map associated with the map frame
+map_obj = map_frame.map
+
+#Iterate through each site in the feature class
+with arcpy.da.SearchCursor(f"{input_gdb}\\{feature_class}", ["OID@", "Feature_Ty", "SHAPE@"]) as cursor:
+    for row in cursor:
+        oid = row[0]
+        site_name = row[1]
+        site_geometry = row[2]
+        
+        #Create a copy of the layout
+        new_layout_name = f"Site_{site_name}_6.5x8.25"
+        new_layout = aprx.copyItem(template_layout, new_layout_name)
+        
+        #Get the map frame in the new layout
+        new_map_frame = new_layout.listElements("MAPFRAME_ELEMENT")[0]
+        
+        #Zoom the map frame to the site
+        new_map_frame.camera.setExtent(site_geometry.extent)
+        
+        #Adjust scale to the nearest 1000
+        original_scale = new_map_frame.camera.scale
+        rounded_scale = math.ceil(original_scale / 1000) * 1000
+        new_map_frame.camera.scale = rounded_scale
+        
+        #Update the legend label
+        legend_element = new_layout.listElements("LEGEND_ELEMENT")[0]
+        legend_items = legend_element.listLegendItemLayers()
+        for item in legend_items:
+            if item.name == feature_class:
+                item.name = site_name
+                break
+        else:
+                print(f"Warning: Feature class '{feature_class}' not found in the legend for site {site_name}.")
+        
+        
+#Save the project to preserve the new layouts
+aprx.save()
