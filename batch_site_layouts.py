@@ -2,8 +2,8 @@ import arcpy
 import math
 
 #Parameters
-input_gdb = r"T:\1-PROJECTS\Grid_United\505104_Copper_Basin_Transmissions\7-SCRATCH\CB\CB_Scratch.gdb"
-feature_class = "New_Cultural_Areas_2024"
+input_gdb = r"PATH_TO_GEODATABASE"
+feature_class = "NAME_OF_FEATURE_CLASS"
 template_layout_name = 'Site Map Template'
 
 #Reference the project and template layout
