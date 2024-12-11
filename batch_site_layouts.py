@@ -34,7 +34,7 @@ with arcpy.da.SearchCursor(f"{input_gdb}\\{feature_class}", ["OID@", "Feature_Ty
         map_frame.map = cloned_map  # Point the map frame to the cloned map
         
         # Zoom the map frame to the site
-        map_frame.camera.setExtent(site_geometry.extent)  # Corrected to use map_frame
+        map_frame.camera.setExtent(site_geometry.extent)
         
         # Adjust scale to the nearest 1000
         original_scale = map_frame.camera.scale
