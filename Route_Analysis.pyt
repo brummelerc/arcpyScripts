@@ -104,6 +104,12 @@ class RouteLength_AnalysisTool(object):
               [input_routes, env_layer],
               output_intersect
          )
+         
+         #Project the intersect output if a spatial reference was provided
+         if spatial_ref:
+              projected_intersect = os.path.join("in_memory", "projected_intersect")
+              arcpy.management.Project(output_intersect, projected_intersect, spatial_ref)
+              output_intersect = projected_intersect #update reference to use the projected one
 
          messages.addMessage("Adding and calculating length field...")
          arcpy.management.AddField(
