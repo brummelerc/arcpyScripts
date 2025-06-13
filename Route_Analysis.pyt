@@ -7,6 +7,8 @@ class Toolbox(object):
         self.description = "Calculates statistics when a route crosses an environmental layer"
         self.tools = [RouteLength_AnalysisTool]
 
+## Tool for calculating the total length of a route over an underlying environmental resource. Good for calculating
+## the total distance the route moves over the resource.
 class RouteLength_AnalysisTool(object):
     def __init__(self):
         self.label = "Route Length Analysis Tool"
