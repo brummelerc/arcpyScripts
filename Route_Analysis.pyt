@@ -289,24 +289,29 @@ class BatchSpatialJoin(object):
 
           return[p0, p1, p2, p3, p4]
      def execute(self, parameters, messages):
-          targets = parameters[0].valueAsText.split(";")
-          joins = parameters[1].valueAsText.split(";")
-          output_gdb = parameters[2].valueAsText
-          join_type = parameters[3].valueAsText
-          match_option = parameters[4].valueAsText
+          targets_input = parameters[0].valueAsText.split(";")
+          joins_input = parameters[1].valueAsText.split(";")
 
           aprx = arcpy.mp.ArcGISProject("CURRENT")
-          m = aprx.listMaps()[0]
+          m = aprx.activeMap
 
-          targets = [lyr for lyr in m.listLayers() if lyr.name in targets]
-          joins = [lyr for lyr in m.listLayers() if lyr.name in joins]
+          def resolve_input(item):
+               #try to find a layer in the map with this name
+               lyr = next((lyr for lyr in m.listLayers()if lyr.name == item), none)
+               return lyr if lyr is not None else item #layer object or path string
+          
+          def name_of(obj):
+               return obj.name if hasattr(obj, "name") else os.path.splitext(os.path.basename(obj))[0]
+
+          targets = [resolve_input(t) for t in targets_input]
+          joins = [resolve_input(j) for j in joins_input]
 
           for target_lyr in targets:
                for join_lyr in joins:
-                    out_name = f"{target_lyr.name}_{join_lyr.name}_SJ"
+                    out_name = f"{name_of(target_lyr)}_{name_of(join_lyr)}_SJ"
                     out_fc = os.path.join(output_gdb, arcpy.ValidateTableName(out_name, output_gdb))
 
-                    arcpy.AddMessage(f"Running spatial join: {target_lyr.name} + join_lyr.name -> {out_name}")
+                    arcpy.AddMessage(f"Running spatial join: {name_of(target_lyr)} + {name_of(join_lyr)} -> {out_name}")
 
                     arcpy.analysis.SpatialJoin(
                          target_features = target_lyr,
