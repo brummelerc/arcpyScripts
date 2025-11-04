@@ -297,7 +297,7 @@ class BatchSpatialJoin(object):
 
           def resolve_input(item):
                #try to find a layer in the map with this name
-               lyr = next((lyr for lyr in m.listLayers()if lyr.name == item), none)
+               lyr = next((lyr for lyr in m.listLayers()if lyr.name == item), None)
                return lyr if lyr is not None else item #layer object or path string
           
           def name_of(obj):
