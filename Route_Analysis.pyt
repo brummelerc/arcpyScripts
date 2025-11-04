@@ -304,7 +304,7 @@ class BatchSpatialJoin(object):
           for target_lyr in targets:
                for join_lyr in joins:
                     out_name = f"{target_lyr.name}_{join_lyr.name}_SJ"
-                    out_fc = os.path.join(output_gdb, arcpy.ValidateTableName(out_name, outut_gdb))
+                    out_fc = os.path.join(output_gdb, arcpy.ValidateTableName(out_name, output_gdb))
 
                     arcpy.AddMessage(f"Running spatial join: {target_lyr.name} + join_lyr.name -> {out_name}")
 
