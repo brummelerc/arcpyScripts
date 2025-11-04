@@ -5,7 +5,7 @@ class Toolbox(object):
     def __init__(self):
         self.label = "Route Analysis Toolbox"
         self.description = "Calculates statistics when a route crosses an environmental layer"
-        self.tools = [RouteLength_AnalysisTool, RouteCrossings_AnalysisTool]
+        self.tools = [RouteLength_AnalysisTool, RouteCrossings_AnalysisTool, BatchSpatialJoin]
 
 ## Tool for calculating the total length of a route over an underlying environmental resource. Good for calculating
 ## the total distance the route moves over the resource.
@@ -235,3 +235,85 @@ class RouteCrossings_AnalysisTool(object):
          )
 
          messages.addMessage("Analysis complete.")
+
+class BatchSpatialJoin(object):
+     def __init__(self):
+          self.label = "Batch Spatial Join"
+          self.description = "Spatially join multiple environmental layers to multiple target layers"
+
+     def getParameterInfo(self):
+          params = []
+
+          p0 = arcpy.Parameter(
+               displayName = "Target Layers",
+               name = "target_layers",
+               datatype = "GPFeatureLayer",
+               parameterType = "Required",
+               direction = "Input",
+               multiValue = True
+          )
+
+          p1 = arcpy.Parameter(
+               displayName = "Join Layers",
+               name = "join_layers",
+               datatype = "GPFeatureLayer",
+               parameterType = "Required",
+               direction = "Input",
+               multiValue = True
+          )
+
+          p2 = arcpy.Parameter(
+            displayName="Output Geodatabase",
+            name="output_gdb",
+            datatype="DEWorkspace",
+            parameterType="Required",
+            direction="Input"
+            )
+          
+          p3 = arcpy.Parameter(
+            displayName="Join Type",
+            name="join_type",
+            datatype="GPString",
+            parameterType="Optional",
+            direction="Input")
+          p3.value = "KEEP_ALL"
+
+          p4 = arcpy.Parameter(
+               displayName = "Match Option",
+               name = "match_option",
+               datatype = "GPString",
+               parameterType = "Optional",
+               direction = "Input"
+          )
+          p4.value = "INTERSECT"
+
+          return[p0, p1, p2, p3, p4]
+     def execute(self, parameters, messages):
+          targets = parameters[0].valueAsText.split(";")
+          joins = parameters[1].valueAsText.split(";")
+          output_gdb = parameters[2].valueAsText
+          join_type = parameters[3].valueAsText
+          match_option = parameters[4].valueAsText
+
+          aprx = arcpy.mp.ArcGISProject("CURRENT")
+          m = aprx.listMaps()[0]
+
+          targets = [lyr for lyr in m.listLayers() if lyr.name in targets]
+          joins = [lyr for lyr in m.listLayers() if lyr.name in joins]
+
+          for target_lyr in targets:
+               for join_lyr in joins:
+                    out_name = f"{target_lyr.name}_{join_lyr.name}_SJ"
+                    out_fc = os.path.join(output_gdb, arcpy.ValidateTableName(out_name, outut_gdb))
+
+                    arcpy.AddMessage(f"Running spatial join: {target_lyr.name} + join_lyr.name -> {out_name}")
+
+                    arcpy.analysis.SpatialJoin(
+                         target_features = target_lyr,
+                         join_features = join_lyr,
+                         out_feature_class = out_fc,
+                         join_type = join_type,
+                         match_option = match_option
+                    )
+
+          arcpy.AddMessage("All spatial joins completed successfully.")
