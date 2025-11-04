@@ -291,6 +291,9 @@ class BatchSpatialJoin(object):
      def execute(self, parameters, messages):
           targets_input = parameters[0].valueAsText.split(";")
           joins_input = parameters[1].valueAsText.split(";")
+          output_gdb = parameters[2].valueAsText
+          join_type = parameters[3].valueAsText
+          match_option = parameters[4].valueAsText
 
           aprx = arcpy.mp.ArcGISProject("CURRENT")
           m = aprx.activeMap
