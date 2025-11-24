@@ -2,7 +2,7 @@ class Toolbox(object):
     def __init__(self):
         self.label = "Soil Analysis Toolbox"
         self.description = "Combines and calculates datasets from the USDA Web Soil Survey"
-        self.tools = [CombineDatasetsTool]
+        self.tools = [CombineDatasetsTool, JoinHydricSoilsTool]
 
 class CombineDatasetsTool(object):
     def __init__(self):
@@ -54,3 +54,57 @@ class CombineDatasetsTool(object):
 
         arcpy.FeatureClassToFeatureClass_conversion(temp_shapefile, output_gdb, output_fc)
         arcpy.AddMessage(f"Combined feature class saved to {output_gdb}\\{output_fc}")
+
+class JoinHydricSoilsTool(object):
+    def __init__(self):
+        self.label = "Join Hydric Soils Table"
+        self.description = "Join Web Soil Survey CSV to shapefiles"
+
+    def getParameterInfo(self):
+        params = [
+            arcpy.Parameter(
+                displayName = "Input Shapefiles",
+                name = "input_shapefiles",
+                datatype = "DEFeatureClass",
+                parameterType = "Required",
+                direction = "Input",
+                multivalue = True
+            ),
+            arcpy.Parameter(
+                displayName = "Hydric Soils CSV",
+                name = "hydric_csv",
+                datatype = "DEFile",
+                parameterType = "Required",
+                direction = "Input"
+            ),
+            arcpy.Parameter(
+                displayName = "Output Geodatabase",
+                name = "output_gdb",
+                datatype = "DEWorkspace",
+                parameterType = "Required",
+                direction = "Input"
+            )
+        ]
+        return params
+    
+    def execute(self, parameters, messages):
+        import geopandas as gpd
+        import pandas as pd
+        import arcpy
+        import os
+
+        input_shapefiles = parameters[0].valueAsText.split(";")
+        hydric_csv = parameters[1].valueAsText
+        output_gdb = parameters[2].valueAsText
+
+        hydric_df = pd.read_csv(hydric_csv)
+
+        for shp in input_shapefiles:
+            gdf = gpd.read_file(shp)
+            joined = gdf.merge(hydric_df, left_on="MUKEY", right_on="mukey", how="left")
+            matched = joined.dropna(subset=["Hydric_Rating"])
+            temp_shp = os.path.join(arcpy.env.scratchFolder, f"{os.path.splitext(os.path.basename(shp))[0]}_hydricsoils.shp")
+            matched.to_file(temp_shp)
+            out_fc = f"{os.path.splitext(os.path.basename(shp))[0]}_hydricsoils"
+            arcpy.FeatureClassToFeatureClass_conversion(temp_shp, output_gdb, out_fc)
+            arcpy.AddMessage(f"Output: {output_gdb}\\{out_fc}")
