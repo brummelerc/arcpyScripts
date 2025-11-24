@@ -14,7 +14,7 @@ class CombineDatasetsTool(object):
             arcpy.Parameter(
                 displayName = "Input Datasets",
                 name = "input_files",
-                datatype = "DEFile",
+                datatype = "DEFeatureClass",
                 parameterType = "Required",
                 direction = "Input",
                 multiValue = True
