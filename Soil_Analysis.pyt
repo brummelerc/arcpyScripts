@@ -100,7 +100,7 @@ class JoinHydricSoilsTool(object):
         hydric_df = pd.read_csv(hydric_csv)
 
         for feat in input_features:
-            if feat.lower().endwith(".shp"):
+            if feat.lower().endswith(".shp"):
                 shp_path = feat
             else:
                 temp_shp = os.path.join(arcpy.env.scratchFolder, f"{os.path.basename(feat)}_temp.shp")
