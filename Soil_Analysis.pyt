@@ -97,9 +97,11 @@ class JoinHydricSoilsTool(object):
 
         for feat in input_features:
             arcpy.management.AddJoin(feat, "MUKEY", hydric_table, "MUKEY1")
+            fields = [f.name for f in arcpy.ListFields(feat)]
+            arcpy.AddMessage("Fields after join: " + str(fields))
             joined_field = None
-            for f in arcpy.ListFields(feat):
-                if "Hydric_Rating" in f.name:
+            for f in fields:
+                if "Hydric_Rating" in f.name or "Hydric_Ra" in f.name:
                     joined_field = f.name
                     break
             if not joined_field:
