@@ -99,12 +99,19 @@ class JoinHydricSoilsTool(object):
 
         hydric_df = pd.read_csv(hydric_csv)
 
-        for shp in input_shapefiles:
-            gdf = gpd.read_file(shp)
+        for feat in input_features:
+            if feat.lower().endwith(".shp"):
+                shp_path = feat
+            else:
+                temp_shp = os.path.join(arcpy.env.scratchFolder, f"{os.path.basename(feat)}_temp.shp")
+                arcpy.FeatureClassToFeatureClass_conversion(feat, arcpy.env.scratchFolder, f"{os.path.basename(feat)}_temp")
+                shp_path = temp_shp
+            
+            gdf = gpd.read_file(shp_path)
             joined = gdf.merge(hydric_df, left_on="MUKEY", right_on="mukey", how="left")
             matched = joined.dropna(subset=["Hydric_Rating"])
-            temp_shp = os.path.join(arcpy.env.scratchFolder, f"{os.path.splitext(os.path.basename(shp))[0]}_hydricsoils.shp")
-            matched.to_file(temp_shp)
-            out_fc = f"{os.path.splitext(os.path.basename(shp))[0]}_hydricsoils"
-            arcpy.FeatureClassToFeatureClass_conversion(temp_shp, output_gdb, out_fc)
+            out_temp_shp = os.path.join(arcpy.env.scratchFolder, f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils.shp")
+            matched.to_file(out_temp_shp)
+            out_fc = f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils"
+            arcpy.FeatureClassToFeatureClass_conversion(out_temp_shp, output_gdb, out_fc)
             arcpy.AddMessage(f"Output: {output_gdb}\\{out_fc}")
