@@ -72,8 +72,8 @@ class JoinHydricSoilsTool(object):
             ),
             arcpy.Parameter(
                 displayName = "Hydric Soils CSV",
-                name = "hydric_csv",
-                datatype = "DEFile",
+                name = "hydric_table",
+                datatype = "DETable",
                 parameterType = "Required",
                 direction = "Input"
             ),
@@ -92,19 +92,21 @@ class JoinHydricSoilsTool(object):
         import os
 
         input_features = parameters[0].valueAsText.split(";")
-        hydric_csv = parameters[1].valueAsText
+        hydric_table = parameters[1].valueAsText
         output_gdb = parameters[2].valueAsText
 
         for feat in input_features:
-            hydric_table = os.path.join(arcpy.env.scratchGDB, "hydric_table")
-            arcpy.TableToTable_conversion(hydric_csv, arcpy.env.scratchGDB, "hydric_table")
-
-            arcpy.AddJoin_management(feat, "MUKEY", hydric_table, "mukey")
-            fields = [f.name for f in arcpy.ListFields(feat)]
-            print(fields)  # Or arcpy.AddMessage(str(fields))
+            arcpy.management.AddJoin(feat, "MUKEY", hydric_table, "MUKEY1")
+            joined_field = None
+            for f in arcpy.ListFields(feat):
+                if "Hydric_Rating" in f.name:
+                    joined_field = f.name
+                    break
+            if not joined_field:
+                raise Exception("Hydric_Rating field not found after join.")
+            sql_expression = f"{joined_field} = 'Yes'"
             out_fc_name = f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils"
-            sql_expression = "hydric_table.Hydric_Rating IS NOT NULL"
-            arcpy.FeatureClassToFeatureClass_conversion(feat, output_gdb, out_fc_name, sql_expression)
-            arcpy.RemoveJoin_management(feat)
-
-            arcpy.AddMessage(f"Output: {out_fc_name}")
+            out_fc_path = os.path.join(output_gdb, out_fc_name)
+            arcpy.conversion.ExportFeatures(feat, out_fc_path, sql_expression)
+            arcpy.management.RemoveJoin(feat)
+            arcpy.AddMessage(f"Output: {out_fc_path}")
