@@ -99,11 +99,10 @@ class JoinHydricSoilsTool(object):
             hydric_table = os.path.join(arcpy.env.scratchGDB, "hydric_table")
             arcpy.TableToTable_conversion(hydric_csv, arcpy.env.scratchGDB, "hydric_table")
 
-            arcpy.AddJoin_management(feat, "MUKEY", hydric_table, 'mukey', 'KEEP COMMON')
-
-            out_fc = os.path.join(output_gdb, f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils")
-            arcpy.FeatureClassToFeatureClass_conversion(feat, output_gdb, f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils")
-
+            arcpy.AddJoin_management(feat, "MUKEY", hydric_table, "mukey")
+            out_fc_name = f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils"
+            sql_expression = "hydric_table.Hydric_Rating IS NOT NULL"
+            arcpy.FeatureClassToFeatureClass_conversion(feat, output_gdb, out_fc_name, sql_expression)
             arcpy.RemoveJoin_management(feat)
 
-            arcpy.AddMessage(f"Output: {out_fc}")
+            arcpy.AddMessage(f"Output: {out_fc_name}")
