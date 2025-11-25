@@ -100,13 +100,14 @@ class JoinHydricSoilsTool(object):
             fields = [f.name for f in arcpy.ListFields(feat)]
             arcpy.AddMessage("Fields after join: " + str(fields))
             joined_field = None
-            for f in fields:
+            for f in arcpy.ListFields(feat):
+                # Look for Hydric_Rating or truncated/prefixed version
                 if "Hydric_Rating" in f.name or "Hydric_Ra" in f.name:
                     joined_field = f.name
                     break
             if not joined_field:
-                raise Exception("Hydric_Rating field not found after join.")
-            sql_expression = f"{joined_field} = 'Yes'"
+                raise Exception("Hydric_Rating field not found after join. See field list above.")
+            sql_expression = f"{joined_field} IS NOT NULL"
             out_fc_name = f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils"
             out_fc_path = os.path.join(output_gdb, out_fc_name)
             arcpy.conversion.ExportFeatures(feat, out_fc_path, sql_expression)
