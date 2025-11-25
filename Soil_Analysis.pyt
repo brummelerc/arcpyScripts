@@ -100,6 +100,8 @@ class JoinHydricSoilsTool(object):
             arcpy.TableToTable_conversion(hydric_csv, arcpy.env.scratchGDB, "hydric_table")
 
             arcpy.AddJoin_management(feat, "MUKEY", hydric_table, "mukey")
+            fields = [f.name for f in arcpy.ListFields(feat)]
+            print(fields)  # Or arcpy.AddMessage(str(fields))
             out_fc_name = f"{os.path.splitext(os.path.basename(feat))[0]}_hydricsoils"
             sql_expression = "hydric_table.Hydric_Rating IS NOT NULL"
             arcpy.FeatureClassToFeatureClass_conversion(feat, output_gdb, out_fc_name, sql_expression)
