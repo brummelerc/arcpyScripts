@@ -111,9 +111,10 @@ class JoinHydricSoilsTool(object):
             shp_path = temp_shp
             
             gdf = gpd.read_file(shp_path)
-            gdf['MUKEY'] = gdf['MUKEY'].astype(str)
-            hydric_df['mukey'] = hydric_df['mukey'].astype(str)
+            gdf['MUKEY'] = gdf['MUKEY'].astype(str).str.strip()
+            hydric_df['mukey'] = hydric_df['mukey'].astype(str).str.strip()
             joined = gdf.merge(hydric_df, left_on="MUKEY", right_on="mukey", how="left")
+            print(joined['mukey'].notna().sum())
             matched = joined.dropna(subset=["Hydric_Rating"])
             out_temp_shp = os.path.join(arcpy.env.scratchFolder, f"{base_name}_hydricsoils.shp")
             matched.to_file(out_temp_shp)
