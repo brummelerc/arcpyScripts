@@ -63,8 +63,8 @@ class JoinHydricSoilsTool(object):
     def getParameterInfo(self):
         params = [
             arcpy.Parameter(
-                displayName = "Input Shapefiles",
-                name = "input_shapefiles",
+                displayName = "Input Features",
+                name = "input_features",
                 datatype = "DEFeatureClass",
                 parameterType = "Required",
                 direction = "Input",
@@ -93,7 +93,7 @@ class JoinHydricSoilsTool(object):
         import arcpy
         import os
 
-        input_shapefiles = parameters[0].valueAsText.split(";")
+        input_features = parameters[0].valueAsText.split(";")
         hydric_csv = parameters[1].valueAsText
         output_gdb = parameters[2].valueAsText
 
