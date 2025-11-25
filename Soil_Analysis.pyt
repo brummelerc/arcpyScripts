@@ -68,7 +68,7 @@ class JoinHydricSoilsTool(object):
                 datatype = "DEFeatureClass",
                 parameterType = "Required",
                 direction = "Input",
-                multivalue = True
+                multiValue = True
             ),
             arcpy.Parameter(
                 displayName = "Hydric Soils CSV",
