@@ -132,6 +132,18 @@ class RouteLength_AnalysisTool(object):
         else:
               spatial_ref = coordinate_system
 
+        projected_routes = arcpy.management.Project(
+             input_routes,
+             "in_memory\\projected_routes",
+             spatial_ref
+        )[0]
+
+        projected_env = arcpy.management.Project(
+             env_layer,
+             "in_memory\\projected_env",
+             spatial_ref
+        )[0]
+
           #If buffer_distance is provided, buffer the input_routes first
         if buffer_distance is not None and buffer_distance > 0:
               workspace, base_name = os.path.split(output_dissolve)
@@ -143,7 +155,7 @@ class RouteLength_AnalysisTool(object):
                    buffer_dist_str = str(buffer_distance)
               messages.addMessage(f"Buffering input routes by {buffer_distance} units...")
               arcpy.analysis.Buffer(
-                   in_features = input_routes,
+                   in_features = projected_routes,
                    out_feature_class = buffered_routes,
                    buffer_distance_or_field = buffer_dist_str,
                    line_side = "FULL",
@@ -166,7 +178,7 @@ class RouteLength_AnalysisTool(object):
 
         messages.addMessage("Running pairwise intersection...")
         arcpy.analysis.PairwiseIntersect(
-            [input_routes, env_layer],
+            [intersect_input, projected_env],
             output_intersect
         )
         intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
