@@ -137,9 +137,14 @@ class RouteLength_AnalysisTool(object):
                    line_end_type = "ROUND",
                    dissolve_option = "ALL"
               )
+              buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
+              messages.addMessage(f"Buffered features count: {buffer_count}")
               intersect_input = buffered_routes
         else:
               intersect_input = input_routes
+              buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
+              messages.addMessage(f"Buffered features count: {buffer_count}")
+        
 
         #Create intermediate outpute in same location with '_intersect' suffix
         workspace, base_name = os.path.split(output_dissolve)
@@ -151,6 +156,8 @@ class RouteLength_AnalysisTool(object):
             [input_routes, env_layer],
             output_intersect
         )
+        intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
+        messages.addMessage(f"Intersect output feature count: {intersect_count}")
         
         #Project the intersect output if a spatial reference was provided
         if spatial_ref:
@@ -179,6 +186,8 @@ class RouteLength_AnalysisTool(object):
             dissolve_field=dissolve_field,
             statistics_fields=[['Dissolve_length', 'SUM']]
         )
+        dissolve_count = int(arcpy.management.GetCount(output_dissolve)[0])
+        messages.addMessage(f"Output dissolved feature count: {dissolve_count}")
 
         messages.addMessage("Analysis complete.")
 
