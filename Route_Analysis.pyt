@@ -99,7 +99,19 @@ class RouteLength_AnalysisTool(object):
             buffer_units.filter.list = ["Feet", "Meters", "Kilometers", "Miles"]
             buffer_units.defaultValue = "Feet"
             params.append(buffer_units)
-            
+
+            buffer_dissolve = arcpy.Parameter(
+                 displayName = "Dissolve Buffers",
+                 name = "buffer_dissolve",
+                 datatype = "GPString",
+                 parameterType = "Optional",
+                 direction = "Input"
+            )
+            buffer_dissolve.filter.type = "ValueList"
+            buffer_dissolve.filter.list = ["ALL", "NONE"]
+            buffer_dissolve.defaultValue = "NONE"
+            params.append(buffer_dissolve)
+
             return params
     
     def execute(self, parameters, messages):
@@ -112,6 +124,7 @@ class RouteLength_AnalysisTool(object):
         length_unit = parameters[5].valueAsText
         buffer_distance = parameters[6].value
         buffer_units = parameters[7].value
+        dissolve_option = parameters[8].value if len(parameters) > 8 and parameters[8].value else "NONE"
 
         #Use user-specified coordinate system, or fall back on input_routes
         if coordinate_system is None:
@@ -135,7 +148,7 @@ class RouteLength_AnalysisTool(object):
                    buffer_distance_or_field = buffer_dist_str,
                    line_side = "FULL",
                    line_end_type = "ROUND",
-                   dissolve_option = "ALL"
+                   dissolve_option = dissolve_option
               )
               buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
               messages.addMessage(f"Buffered features count: {buffer_count}")
