@@ -503,7 +503,7 @@ class RouteBufferArea_AnalysisTool(object):
                buffer_distance_or_field = buffer_dist_str,
                line_side = "FULL",
                line_end_type = "ROUND",
-               dissolve_option - dissolve_option
+               dissolve_option = dissolve_option
           )
           buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
           messages.addMessage(f"Buffered features count: {buffer_count}")
