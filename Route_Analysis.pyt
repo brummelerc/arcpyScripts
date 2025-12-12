@@ -166,11 +166,8 @@ class RouteLength_AnalysisTool(object):
               messages.addMessage(f"Buffered features count: {buffer_count}")
               intersect_input = buffered_routes
         else:
-              intersect_input = input_routes
-              buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
-              messages.addMessage(f"Buffered features count: {buffer_count}")
+              intersect_input = projected_routes
         
-
         #Create intermediate outpute in same location with '_intersect' suffix
         workspace, base_name = os.path.split(output_dissolve)
         base_name_no_ext = os.path.splitext(base_name)[0]
