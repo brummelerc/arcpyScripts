@@ -398,6 +398,17 @@ class RouteBufferArea_AnalysisTool(object):
           )
           params.append(input_routes)
 
+          dissolve_field = arcpy.Parameter(
+               displayName = "Dissolve Field",
+               name = "dissolve_field",
+               datatype = "Field",
+               parameterType = "Required",
+               direction = "Input"
+          )
+          dissolve_field.parameterDependencies = ["input_routes"]
+          dissolve_field.filter.list = ["String"]
+          params.append(dissolve_field)
+
           input_env_layer = arcpy.Parameter(
                displayName = "Input Environmental Layer",
                name = "input_env_layer",
@@ -462,12 +473,13 @@ class RouteBufferArea_AnalysisTool(object):
      
      def execute(self, parameters, messages):
           input_routes = parameters[0].valueAsText
-          input_env_layer = parameters[1].valueAsText
-          output_intersect = parameters[2].valueAsText
-          coordinate_system = parameters[3].value
-          buffer_distance = parameters[4].value
-          buffer_units = parameters[5].value
-          dissolve_option = parameters[6].value if len(parameters) > 6 and parameters[6].value else "ALL"
+          dissolve_field = parameters[1].valueAsText
+          input_env_layer = parameters[2].valueAsText
+          output_intersect = parameters[3].valueAsText
+          coordinate_system = parameters[4].value
+          buffer_distance = parameters[5].value
+          buffer_units = parameters[6].value
+          dissolve_option = parameters[7].value if len(parameters) > 7 and parameters[7].value else "ALL"
 
 
           #use specified coordinate system or fall back on input routes
@@ -510,30 +522,42 @@ class RouteBufferArea_AnalysisTool(object):
 
           #Intersect buffered routes with environmental layers
           messages.addMessage("Running intersection with environmental layers...")
+          intersect_fc = os.path.join("in_memory", f"{base_name_no_ext}_intersect")
           arcpy.analysis.Intersect(
                in_features = [[buffered_routes, ""], [projected_polygons, ""]],
-               out_feature_class = output_intersect,
+               out_feature_class = intersect_fc,
                join_attributes = "ALL",
                cluster_tolerance = None,
                output_type = "INPUT"
           )
-          intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
+          intersect_count = int(arcpy.management.GetCount(intersect_fc)[0])
           messages.addMessage(f"Intersect output feature count: {intersect_count}")
 
           #Add and calculate area in acres
           messages.addMessage("Adding and calculating area in acres...")
           arcpy.management.AddField(
-               output_intersect,
+               intersect_fc,
                "Intersect_Acres",
                "DOUBLE"
           )
 
           arcpy.management.CalculateGeometryAttributes(
-               output_intersect,
+               intersect_fc,
                [["Intersect_Acres", "AREA"]],
                area_unit = "ACRES",
                coordinate_system = spatial_ref
           )
+
+          #Dissolve by field, summing the area
+          messages.addMessage(f"Dissolving by field '{dissolve_field} and summarizing acres...")
+          arcpy.analysis.PairwiseDissolve(
+               in_features = intersect_fc,
+               out_feature_class = output_intersect,
+               dissolve_field = dissolve_field,
+               statistics_fields = [["Intersect_Acres", "SUM"]]
+          )
+          dissolve_count = int(arcpy.management.GetCount(output_intersect)[0])
+          message.addMessage(f"Output dissolved feature count {dissolve_count}")
 
           messages.addMessage("Analysis complete.")
 
