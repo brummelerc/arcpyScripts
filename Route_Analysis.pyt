@@ -5,7 +5,7 @@ class Toolbox(object):
     def __init__(self):
         self.label = "Route Analysis Toolbox"
         self.description = "Calculates statistics when a route crosses an environmental layer"
-        self.tools = [RouteLength_AnalysisTool, RouteCrossings_AnalysisTool, BatchSpatialJoin]
+        self.tools = [RouteLength_AnalysisTool, RouteCrossings_AnalysisTool, RouteBufferArea_AnalysisTool]
 
 ## Tool for calculating the total length of a route over an underlying environmental resource. Good for calculating
 ## the total distance the route moves over the resource.
@@ -380,92 +380,160 @@ class RouteCrossings_AnalysisTool(object):
 
         messages.addMessage("Analysis complete.")
 
-class BatchSpatialJoin(object):
+class RouteBufferArea_AnalysisTool(object):
      def __init__(self):
-          self.label = "Batch Spatial Join"
-          self.description = "Spatially join multiple environmental layers to multiple target layers"
+          self.label = "Route Buffer Area Analysis Tool"
+          self.description = "Buffers a route and calculates the area in acres of intersecting layers"
+          self.canRunInBackground = False
 
      def getParameterInfo(self):
           params = []
 
-          p0 = arcpy.Parameter(
-               displayName = "Target Layers",
-               name = "target_layers",
+          input_routes = arcpy.Parameter(
+               displayName = "Input Routes",
+               name = "input_routes",
                datatype = "GPFeatureLayer",
                parameterType = "Required",
-               direction = "Input",
-               multiValue = True
+               direction = "Input"
           )
+          params.append(input_routes)
 
-          p1 = arcpy.Parameter(
-               displayName = "Join Layers",
-               name = "join_layers",
+          input_env_layer = arcpy.Parameter(
+               displayName = "Input Environmental Layer",
+               name = "input_env_layer",
                datatype = "GPFeatureLayer",
                parameterType = "Required",
-               direction = "Input",
-               multiValue = True
+               direction = "Input"
           )
+          params.append(input_env_layer)
 
-          p2 = arcpy.Parameter(
-            displayName="Output Geodatabase",
-            name="output_gdb",
-            datatype="DEWorkspace",
-            parameterType="Required",
-            direction="Input"
-            )
-          
-          p3 = arcpy.Parameter(
-            displayName="Join Type",
-            name="join_type",
-            datatype="GPString",
-            parameterType="Optional",
-            direction="Input")
-          p3.value = "KEEP_ALL"
+          output_intersect = arcpy.Parameter(
+               displayName = "Output Intersect Feature Class",
+               name = "output_intersect",
+               datatype = "DEFeatureClass",
+               parameterType = "Required",
+               direction = "Output"
+          )
+          params.append(output_intersect)
 
-          p4 = arcpy.Parameter(
-               displayName = "Match Option",
-               name = "match_option",
+          coordinate_system = arcpy.Parameter(
+               displayName = "Coordinate System (for calculation)",
+               name = "coordinate_system",
+               datatype = "GPCoordinateSystem",
+               parameterType = "Optional",
+               direction = "Input"
+          )
+          params.append(coordinate_system)
+
+          buffer_distance = arcpy.Parameter(
+               displayName = "Buffer Distance",
+               name = "buffer_distance",
+               datatype = "Double",
+               parameterType = "Required",
+               direction = "Input"
+          )
+          params.append(buffer_distance)
+
+          buffer_units = arcpy.Parameter(
+               displayName = "Buffer Units",
+               name = "buffer_units",
+               datatype = "GPString",
+               parameterType = "Required",
+               direction = "Input"
+          )
+          buffer_units.filter.type = "ValueList"
+          buffer_units.filter.list = ["Feet", "Meters", "Kilometers", "Miles"]
+          buffer_units.defaultValue = "Feet"
+          params.append(buffer_units)
+
+          buffer_dissolve = arcpy.Parameter(
+               displayName = "Dissolve Buffers",
+               name = "buffer_dissolve",
                datatype = "GPString",
                parameterType = "Optional",
                direction = "Input"
           )
-          p4.value = "INTERSECT"
+          buffer_dissolve.filter.type = "ValueList"
+          buffer_dissolve.filter.list = ["ALL", "NONE"]
+          buffer_dissolve.defualtValue = "NONE"
+          params.append(buffer_dissolve)
 
-          return[p0, p1, p2, p3, p4]
+          return params
+     
      def execute(self, parameters, messages):
-          targets_input = parameters[0].valueAsText.split(";")
-          joins_input = parameters[1].valueAsText.split(";")
-          output_gdb = parameters[2].valueAsText
-          join_type = parameters[3].valueAsText
-          match_option = parameters[4].valueAsText
+          input_routes = parameters[0].valueAsText
+          input_env_layer = parameters[1].valueAsText
+          output_intersect = parameters[2].valueAsText
+          coordinate_system = parameters[3].value
+          buffer_distance = parameters[4].value
+          buffer_units = parameters[5].value
+          dissolve_option = parameters[6].value if len(parameters) > 6 and parameters[6].value else "ALL"
 
-          aprx = arcpy.mp.ArcGISProject("CURRENT")
-          m = aprx.activeMap
 
-          def resolve_input(item):
-               #try to find a layer in the map with this name
-               lyr = next((lyr for lyr in m.listLayers()if lyr.name == item), None)
-               return lyr if lyr is not None else item #layer object or path string
+          #use specified coordinate system or fall back on input routes
+          if coordinate_system is None:
+               spatial_ref = arcpy.Describe(input_routes).spatialReference
+          else:
+               spatial_ref = coordinate_system
           
-          def name_of(obj):
-               return obj.name if hasattr(obj, "name") else os.path.splitext(os.path.basename(obj))[0]
+          projected_routes = arcpy.management.Project(
+               input_routes,
+               "in_memory\\projected_routes",
+               spatial_ref
+          )[0]
 
-          targets = [resolve_input(t) for t in targets_input]
-          joins = [resolve_input(j) for j in joins_input]
+          projected_polygons = arcpy.management.Project(
+               input_env_layer,
+               "in_memory\\projected_polygons",
+               spatial_ref
+          )[0]
 
-          for target_lyr in targets:
-               for join_lyr in joins:
-                    out_name = f"{name_of(target_lyr)}_{name_of(join_lyr)}_SJ"
-                    out_fc = os.path.join(output_gdb, arcpy.ValidateTableName(out_name, output_gdb))
+          #buffer the routes
+          workspace, base_name = os.path.split(output_intersect)
+          base_name_no_ext = os.path.splitext(base_name)[0]
+          buffered_routes = os.path.join("in_memory", f"{base_name_no_ext}_buffered_routes")
+          if buffer_units:
+               buffer_dist_str = f"{buffer_distance} {buffer_units.lower()}"
+          else:
+               buffer_dist_str = str(buffer_distance)
+          messages.addMessage(f"Buffering input routes by {buffer_dist_str}...")
+          arcpy.analysis.Buffer(
+               in_features = projected_routes,
+               out_feature_class = buffered_routes,
+               buffer_distance_or_field = buffer_dist_str,
+               line_side = "FULL",
+               line_end_type = "ROUND",
+               dissolve_option - dissolve_option
+          )
+          buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
+          messages.addMessage(f"Buffered features count: {buffer_count}")
 
-                    arcpy.AddMessage(f"Running spatial join: {name_of(target_lyr)} + {name_of(join_lyr)} -> {out_name}")
+          #Intersect buffered routes with environmental layers
+          messages.addMessage("Running intersection with environmental layers...")
+          arcpy.analysis.Intersect(
+               in_features = [[buffered_routes, ""], [projected_polygons, ""]],
+               out_feature_class = output_intersect,
+               join_attributes = "ALL",
+               cluster_tolerance = None,
+               output_type = "INPUT"
+          )
+          intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
+          messages.addMessage(f"Intersect output feature count: {intersect_count}")
 
-                    arcpy.analysis.SpatialJoin(
-                         target_features = target_lyr,
-                         join_features = join_lyr,
-                         out_feature_class = out_fc,
-                         join_type = join_type,
-                         match_option = match_option
-                    )
+          #Add and calculate area in acres
+          messages.addMessage("Adding and calculating area in acres...")
+          arcpy.management.AddField(
+               output_intersect,
+               "Intersect_Acres",
+               "DOUBLE"
+          )
 
-          arcpy.AddMessage("All spatial joins completed successfully.")
+          arcpy.management.CalculateGeometryAttributes(
+               output_intersect,
+               [["Intersect_Acres", "AREA"]],
+               area_unit = "ACRES",
+               coordinate_system = spatial_ref
+          )
+
+          messages.addMessage("Analysis complete.")
+
