@@ -557,7 +557,7 @@ class RouteBufferArea_AnalysisTool(object):
                statistics_fields = [["Intersect_Acres", "SUM"]]
           )
           dissolve_count = int(arcpy.management.GetCount(output_intersect)[0])
-          message.addMessage(f"Output dissolved feature count {dissolve_count}")
+          messages.addMessage(f"Output dissolved feature count {dissolve_count}")
 
           messages.addMessage("Analysis complete.")
 
