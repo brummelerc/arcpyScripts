@@ -109,7 +109,7 @@ class RouteLength_AnalysisTool(object):
             )
             buffer_dissolve.filter.type = "ValueList"
             buffer_dissolve.filter.list = ["ALL", "NONE"]
-            buffer_dissolve.defaultValue = "NONE"
+            buffer_dissolve.defaultValue = "ALL"
             params.append(buffer_dissolve)
 
             return params
@@ -240,8 +240,7 @@ class RouteCrossings_AnalysisTool(object):
                       datatype="Field",
                       parameterType="Required",
                       direction="Input",                     
-                )
-            
+               )
             dissolve_field.parameterDependencies = ["input_routes"]
             dissolve_field.filter.list = ["String"]
             params.append(dissolve_field)
@@ -272,6 +271,40 @@ class RouteCrossings_AnalysisTool(object):
                       direction="Input"
                 )
             params.append(coordinate_system)
+
+            buffer_distance = arcpy.Parameter(
+                 displayName = "Buffer Distance",
+                 name = "buffer_distance",
+                 datatype = "Double",
+                 parameterType = "Optional",
+                 direction = "Input"
+            )
+            buffer_distance.value = None
+            params.append(buffer_distance)
+
+            buffer_units = arcpy.Parameter(
+                 displayName = "Buffer Units",
+                 name = "buffer_units",
+                 datatype = "GPString",
+                 parameterType = "Optional",
+                 direction = "Input"
+            )
+            buffer_units.filter.type = "ValueList"
+            buffer_units.filter.list = ["Feet", "Meters", "Kilometers", "Miles"]
+            buffer_units.defaultValue = "Feet"
+            params.append(buffer_units)
+
+            buffer_dissolve = arcpy.Parameter(
+                 displayName = "Dissolve Buffers",
+                 name = "buffer_dissolve",
+                 datatype = "GPString",
+                 parameterType = "Optional",
+                 direction = "Input"
+            )
+            buffer_dissolve.filter.type = "ValueList"
+            buffer_dissolve.filter.list = ["ALL", "NONE"]
+            buffer_dissolve.defaultValue = "ALL"
+            params.append
             
             return params
     
@@ -282,6 +315,9 @@ class RouteCrossings_AnalysisTool(object):
         env_layer = parameters[2].valueAsText
         output_dissolve = parameters[3].valueAsText
         coordinate_system = parameters[4].value
+        buffer_distance = parameters[5].value
+        buffer_units = parameters[6].value
+        dissolve_option = parameter[7].value if len(parameters) > 7 and parameters[7].value else "NONE"
         
         #Use user-specified coordinate system, or fall back on input_routes
         if coordinate_system is None:
@@ -289,23 +325,53 @@ class RouteCrossings_AnalysisTool(object):
         else:
             spatial_ref = coordinate_system
 
+        #Project both layers to the specified coordinate system
+        projected_routes = arcpy.management.Project(
+             input_routes,
+             "in_memory\\projected_routes",
+             spatial_ref
+        )[0]
+
+        projected_env = arcpy.management.Project(
+             env_layer,
+             "in_memory\\projected_env",
+             spatial_ref
+        )[0]
+
+        #Buffer the input_route
+        if buffer_distance is not None and buffer_distance > 0:
+             workspace, base_name = os.path.split(output_dissolve)
+             base_name_no_ext = os.path.splitext(base_name)[0]
+             buffered_routes = os.path.join("in_memory", f"{base_name_no_ext}_buffered_routes")
+             if buffer_units:
+                  buffer_dist_str = f"{buffer_distance} {buffer_units.lower()}"
+             else:
+                  buffer_dist_str = str(buffer_distance)
+             arcpy.analysis.Buffer(
+                  in_features = projected_routes,
+                  out_feature_class = buffered_routes,
+                  buffer_distance_or_field = buffer_dist_str,
+                  line_side = "FULL",
+                  line_end_type = "ROUND",
+                  dissolve_option = dissolve_option
+             )
+             intersect_input = buffered_routes
+        else:
+             intersect_input = projected_routes
+
         #Create intermediate outpute in same location with '_intersect' suffix
         workspace, base_name = os.path.split(output_dissolve)
         base_name_no_ext = os.path.splitext(base_name)[0]
-        output_intersect = os.path.join(workspace, f"{base_name_no_ext}_intersect")
+        output_spatialjoin = os.path.join(os.path.split(output_dissolve)[0], f"{os.path.splitext(os.path.split(output_dissolve)[1])[0]}_spatialjoin")
 
-        messages.addMessage("Running pairwise intersection...")
-        arcpy.analysis.PairwiseIntersect(
-            [input_routes, env_layer],
-            output_intersect, 
-            output_type='POINT'
+        messages.addMessage("Running spatial join...")
+        arcpy.analysis.SpatialJoin(
+             target_features = intersect_input,
+             join_features = projected_env,
+             out_feature_class = output_spatialjoin,
+             join_type = "KEEP ALL",
+             match_option = "INTERSECT"
         )
-        
-        #Project the intersect output if a spatial reference was provided
-        if spatial_ref:
-            projected_intersect = os.path.join("in_memory", "projected_intersect")
-            arcpy.management.Project(output_intersect, projected_intersect, spatial_ref)
-            output_intersect = projected_intersect #update reference to use the projected one
 
         messages.addMessage("Dissolving by route and counting crossings...")
         arcpy.analysis.PairwiseDissolve(
