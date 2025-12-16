@@ -366,7 +366,7 @@ class RouteCrossings_AnalysisTool(object):
              target_features = intersect_input,
              join_features = projected_env,
              out_feature_class = output_spatialjoin,
-             join_type = "KEEP ALL",
+             join_type = "KEEP_ALL",
              match_option = "INTERSECT"
         )
 
