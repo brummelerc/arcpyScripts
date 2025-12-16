@@ -314,7 +314,7 @@ class RouteCrossings_AnalysisTool(object):
         coordinate_system = parameters[4].value
         buffer_distance = parameters[5].value
         buffer_units = parameters[6].value
-        dissolve_option = parameter[7].value if len(parameters) > 7 and parameters[7].value else "NONE"
+        dissolve_option = parameters[7].value if len(parameters) > 7 and parameters[7].value else "NONE"
         
         #Use user-specified coordinate system, or fall back on input_routes
         if coordinate_system is None:
