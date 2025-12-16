@@ -301,7 +301,7 @@ class RouteCrossings_AnalysisTool(object):
             buffer_dissolve.filter.type = "ValueList"
             buffer_dissolve.filter.list = ["ALL", "NONE"]
             buffer_dissolve.defaultValue = "ALL"
-            params.append
+            params.append(buffer_dissolve)
             
             return params
     
@@ -368,14 +368,6 @@ class RouteCrossings_AnalysisTool(object):
              out_feature_class = output_spatialjoin,
              join_type = "KEEP_ALL",
              match_option = "INTERSECT"
-        )
-
-        messages.addMessage("Dissolving by route and counting crossings...")
-        arcpy.analysis.PairwiseDissolve(
-            in_features=output_spatialjoin,
-            out_feature_class=output_dissolve,
-            dissolve_field=dissolve_field,
-            statistics_fields=[['OBJECTID', 'COUNT']]
         )
 
         messages.addMessage("Analysis complete.")
