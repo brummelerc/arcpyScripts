@@ -372,7 +372,7 @@ class RouteCrossings_AnalysisTool(object):
 
         messages.addMessage("Dissolving by route and counting crossings...")
         arcpy.analysis.PairwiseDissolve(
-            in_features=output_intersect,
+            in_features=output_spatialjoin,
             out_feature_class=output_dissolve,
             dissolve_field=dissolve_field,
             statistics_fields=[['OBJECTID', 'COUNT']]
