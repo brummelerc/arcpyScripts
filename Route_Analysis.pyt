@@ -195,7 +195,7 @@ class RouteLength_AnalysisTool(object):
         )
         arcpy.management.CalculateGeometryAttributes(
             output_intersect,
-            [["Dissolve_length", "Length"]],
+            [["Dissolve_length", "LENGTH"]],
             length_unit=length_unit,
             area_unit="",
             coordinate_system=spatial_ref
