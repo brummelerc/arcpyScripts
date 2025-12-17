@@ -25,6 +25,17 @@ class RouteLength_AnalysisTool(object):
         )
           params.append(input_routes)
 
+          dissolve_field = arcpy.Parameter(
+            displayName="Dissolve Field (Route)",
+            name="dissolve_field",
+            datatype="Field",
+            parameterType="Required",
+            direction="Input"
+        )
+          dissolve_field.parameterDependencies = ["input_routes"]
+          dissolve_field.filter.list = ["String"]
+          params.append(dissolve_field)
+
           input_polygon_layer = arcpy.Parameter(
             displayName="Input Polygon Layer",
             name="input_polygon_layer",
@@ -64,26 +75,15 @@ class RouteLength_AnalysisTool(object):
           length_unit.defaultValue = "US SURVEY MILES"
           params.append(length_unit)
 
-          dissolve_field = arcpy.Parameter(
-            displayName="Dissolve Field (Polygon)",
-            name="dissolve_field",
-            datatype="Field",
-            parameterType="Required",
-            direction="Input"
-        )
-          dissolve_field.parameterDependencies = ["input_polygon_layer"]
-          dissolve_field.filter.list = ["String"]
-          params.append(dissolve_field)
-
           return params
 
      def execute(self, parameters, messages):
         input_routes = parameters[0].valueAsText
-        input_polygon_layer = parameters[1].valueAsText
-        output_dissolve = parameters[2].valueAsText
-        coordinate_system = parameters[3].value
-        length_unit = parameters[4].valueAsText
-        dissolve_field = parameters[5].valueAsText
+        dissolve_field = parameters[1].valueAsText
+        input_polygon_layer = parameters[2].valueAsText
+        output_dissolve = parameters[3].valueAsText
+        coordinate_system = parameters[4].value
+        length_unit = parameters[5].valueAsText
 
         # Use user-specified coordinate system, or fall back on input_routes
         if coordinate_system is None:
