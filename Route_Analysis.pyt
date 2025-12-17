@@ -127,7 +127,7 @@ class RouteLength_AnalysisTool(object):
         )
         arcpy.management.CalculateGeometryAttributes(
             output_intersect,
-            [["Intersect_Length", "Length"]],
+            [["Intersect_Length", "LENGTH"]],
             length_unit=length_unit,
             area_unit="",
             coordinate_system=spatial_ref
@@ -144,7 +144,7 @@ class RouteLength_AnalysisTool(object):
         dissolve_count = int(arcpy.management.GetCount(output_dissolve)[0])
         messages.addMessage(f"Output dissolved feature count: {dissolve_count}")
         messages.addMessage("Analysis complete. Output includes summed route length within each polygon group.")
-        
+
 ## Tool for calculating the total length of a route over an underlying environmental resource. Good for calculating
 ## the total distance the route moves over the resource.
 class ParallelRouteLength_AnalysisTool(object):
