@@ -5,13 +5,151 @@ class Toolbox(object):
     def __init__(self):
         self.label = "Route Analysis Toolbox"
         self.description = "Calculates statistics when a route crosses an environmental layer"
-        self.tools = [RouteLength_AnalysisTool, RouteCrossings_AnalysisTool, RouteBufferArea_AnalysisTool]
+        self.tools = [RouteLength_AnalysisTool, ParallelRouteLength_AnalysisTool, RouteCrossings_AnalysisTool, RouteBufferArea_AnalysisTool]
 
+class RouteLength_AnalysisTool(object):
+     def __init__(self):
+          self.label = "Route Length within Environmental Layer"
+          self.description = "Calculates the length of the input routes within another layer"
+          self.canRunInBackground = False
+     
+     def getParameterInfo(self):
+          params = []
+
+          input_routes = arcpy.Parameter(
+            displayName="Input Routes",
+            name="input_routes",
+            datatype="GPFeatureLayer",
+            parameterType="Required",
+            direction="Input"
+        )
+          params.append(input_routes)
+
+          input_polygon_layer = arcpy.Parameter(
+            displayName="Input Polygon Layer",
+            name="input_polygon_layer",
+            datatype="GPFeatureLayer",
+            parameterType="Required",
+            direction="Input"
+        )
+          params.append(input_polygon_layer)
+
+          output_dissolve = arcpy.Parameter(
+            displayName="Output Dissolved Feature Class",
+            name="output_dissolve",
+            datatype="DEFeatureClass",
+            parameterType="Required",
+            direction="Output"
+        )
+          params.append(output_dissolve)
+
+          coordinate_system = arcpy.Parameter(
+            displayName="Coordinate System (for Length Calculation)",
+            name="coordinate_system",
+            datatype="GPCoordinateSystem",
+            parameterType="Optional",
+            direction="Input"
+        )
+          params.append(coordinate_system)
+
+          length_unit = arcpy.Parameter(
+            displayName="Length Unit",
+            name="length_unit",
+            datatype="GPString",
+            parameterType="Required",
+            direction="Input"
+        )
+          length_unit.filter.type = "ValueList"
+          length_unit.filter.list = ["US SURVEY MILES", "KILOMETERS", "METERS", "FEET"]
+          length_unit.defaultValue = "US SURVEY MILES"
+          params.append(length_unit)
+
+          dissolve_field = arcpy.Parameter(
+            displayName="Dissolve Field (Polygon)",
+            name="dissolve_field",
+            datatype="Field",
+            parameterType="Required",
+            direction="Input"
+        )
+          dissolve_field.parameterDependencies = ["input_polygon_layer"]
+          dissolve_field.filter.list = ["String"]
+          params.append(dissolve_field)
+
+          return params
+
+     def execute(self, parameters, messages):
+        input_routes = parameters[0].valueAsText
+        input_polygon_layer = parameters[1].valueAsText
+        output_dissolve = parameters[2].valueAsText
+        coordinate_system = parameters[3].value
+        length_unit = parameters[4].valueAsText
+        dissolve_field = parameters[5].valueAsText
+
+        # Use user-specified coordinate system, or fall back on input_routes
+        if coordinate_system is None:
+            spatial_ref = arcpy.Describe(input_routes).spatialReference
+        else:
+            spatial_ref = coordinate_system
+
+        projected_routes = arcpy.management.Project(
+            input_routes,
+            "in_memory\\projected_routes",
+            spatial_ref
+        )[0]
+
+        projected_polygons = arcpy.management.Project(
+            input_polygon_layer,
+            "in_memory\\projected_polygons",
+            spatial_ref
+        )[0]
+
+        # Intersect routes with polygons (output will be lines within polygons)
+        workspace, base_name = os.path.split(output_dissolve)
+        base_name_no_ext = os.path.splitext(base_name)[0]
+        output_intersect = os.path.join("in_memory", f"{base_name_no_ext}_intersect")
+        messages.addMessage("Intersecting routes with polygons...")
+        arcpy.analysis.Intersect(
+            in_features=[[projected_routes, ""], [projected_polygons, ""]],
+            out_feature_class=output_intersect,
+            join_attributes="ALL",
+            cluster_tolerance=None,
+            output_type="LINE"
+        )
+        intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
+        messages.addMessage(f"Intersect output feature count: {intersect_count}")
+
+        # Add and calculate length field
+        messages.addMessage("Adding and calculating length field...")
+        arcpy.management.AddField(
+            output_intersect,
+            "Intersect_Length",
+            "DOUBLE"
+        )
+        arcpy.management.CalculateGeometryAttributes(
+            output_intersect,
+            [["Intersect_Length", "Length"]],
+            length_unit=length_unit,
+            area_unit="",
+            coordinate_system=spatial_ref
+        )
+
+        # Dissolve by polygon field, summing the length
+        messages.addMessage(f"Dissolving by field '{dissolve_field}' and summarizing length...")
+        arcpy.analysis.PairwiseDissolve(
+            in_features=output_intersect,
+            out_feature_class=output_dissolve,
+            dissolve_field=dissolve_field,
+            statistics_fields=[["Intersect_Length", "SUM"]]
+        )
+        dissolve_count = int(arcpy.management.GetCount(output_dissolve)[0])
+        messages.addMessage(f"Output dissolved feature count: {dissolve_count}")
+        messages.addMessage("Analysis complete. Output includes summed route length within each polygon group.")
+        
 ## Tool for calculating the total length of a route over an underlying environmental resource. Good for calculating
 ## the total distance the route moves over the resource.
-class RouteLength_AnalysisTool(object):
+class ParallelRouteLength_AnalysisTool(object):
     def __init__(self):
-        self.label = "Route Length Analysis Tool"
+        self.label = "Parallel Route Length Analysis Tool"
         self.description = "Calculates the total length a route intersects an environmental layer"
         self.canRunInBackground = False
 
