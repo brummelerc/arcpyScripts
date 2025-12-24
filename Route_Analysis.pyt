@@ -319,6 +319,9 @@ class ParallelRouteLength_AnalysisTool(object):
         intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
         messages.addMessage(f"Intersect output feature count: {intersect_count}")
         
+        fields = [f.name for f in arcpy.ListFields(output_intersect)]
+        messages.addMessage(f"Fields in intersect output: {fields}")
+
         #Project the intersect output if a spatial reference was provided
         if spatial_ref:
             projected_intersect = os.path.join("in_memory", "projected_intersect")
