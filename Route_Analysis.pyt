@@ -314,7 +314,8 @@ class ParallelRouteLength_AnalysisTool(object):
         messages.addMessage("Running pairwise intersection...")
         arcpy.analysis.PairwiseIntersect(
             [intersect_input, projected_env],
-            output_intersect
+            output_intersect,
+            join_attributes = "ALL"
         )
         intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
         messages.addMessage(f"Intersect output feature count: {intersect_count}")
