@@ -312,7 +312,7 @@ class ParallelRouteLength_AnalysisTool(object):
         output_intersect = os.path.join(workspace, f"{base_name_no_ext}_intersect")
 
         messages.addMessage("Running pairwise intersection...")
-        arcpy.analysis.PairwiseIntersect(
+        arcpy.analysis.Intersect(
             [intersect_input, projected_env],
             output_intersect,
             join_attributes = "ALL"
