@@ -282,8 +282,7 @@ class ParallelRouteLength_AnalysisTool(object):
              spatial_ref
         )[0]
 
-        arcpy.management.MakeFeatureLayer(projected_routes, "routes_lyr")
-        arcpy.management.MakeFeatureLayer(projected_env, "env_lyr")
+        env_layer = arcpy.management.MakeFeatureLayer(projected_env, "env_lyr")
 
           #If buffer_distance is provided, buffer the input_routes first
         if buffer_distance is not None and buffer_distance > 0:
@@ -296,7 +295,7 @@ class ParallelRouteLength_AnalysisTool(object):
                    buffer_dist_str = str(buffer_distance)
               messages.addMessage(f"Buffering input routes by {buffer_distance} units...")
               arcpy.analysis.Buffer(
-                   in_features = "routes_lyr",
+                   in_features = projected_routes,
                    out_feature_class = buffered_routes,
                    buffer_distance_or_field = buffer_dist_str,
                    line_side = "FULL",
@@ -305,9 +304,11 @@ class ParallelRouteLength_AnalysisTool(object):
               )
               buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
               messages.addMessage(f"Buffered features count: {buffer_count}")
-              intersect_input = "buffered_routes_lyr"
+              buffered_routes_lyr = arcpy.management.MakeFeatureLayer(buffered_routes, "buffered_routes_lyr")
+              intersect_input = buffered_routes_lyr
         else:
-              intersect_input = "routes_lyr"
+              projected_routes_lyr = arcpy.management.MakeFeatureLayer(projected_routes, "routes_lyr")
+              intersect_input = projected_routes_lyr
         
         #Create intermediate outpute in same location with '_intersect' suffix
         workspace, base_name = os.path.split(output_dissolve)
@@ -316,7 +317,7 @@ class ParallelRouteLength_AnalysisTool(object):
 
         messages.addMessage("Running pairwise intersection...")
         arcpy.analysis.PairwiseIntersect(
-            [intersect_input, "env_lyr"],
+            [intersect_input, env_layer],
             output_intersect
         )
         intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
