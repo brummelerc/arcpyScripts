@@ -174,7 +174,7 @@ class ParallelRouteLength_AnalysisTool(object):
                 )
             
             dissolve_field.parameterDependencies = ["input_routes"]
-            dissolve_field.filter.list = ["String"]
+            dissolve_field.filter.list = ["String", "Integer", "Double", "Single"]
             params.append(dissolve_field)
             
             input_env_layer = arcpy.Parameter(
