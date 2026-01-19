@@ -174,7 +174,7 @@ class ParallelRouteLength_AnalysisTool(object):
                 )
             
             dissolve_field.parameterDependencies = ["input_routes"]
-            dissolve_field.filter.list = ["String", "Integer", "Double", "Single"]
+            dissolve_field.filter.list = ["String"]
             params.append(dissolve_field)
             
             input_env_layer = arcpy.Parameter(
@@ -282,8 +282,6 @@ class ParallelRouteLength_AnalysisTool(object):
              spatial_ref
         )[0]
 
-        env_layer = arcpy.management.MakeFeatureLayer(projected_env, "env_lyr")
-
           #If buffer_distance is provided, buffer the input_routes first
         if buffer_distance is not None and buffer_distance > 0:
               workspace, base_name = os.path.split(output_dissolve)
@@ -304,11 +302,9 @@ class ParallelRouteLength_AnalysisTool(object):
               )
               buffer_count = int(arcpy.management.GetCount(buffered_routes)[0])
               messages.addMessage(f"Buffered features count: {buffer_count}")
-              buffered_routes_lyr = arcpy.management.MakeFeatureLayer(buffered_routes, "buffered_routes_lyr")
-              intersect_input = buffered_routes_lyr
+              intersect_input = buffered_routes
         else:
-              projected_routes_lyr = arcpy.management.MakeFeatureLayer(projected_routes, "routes_lyr")
-              intersect_input = projected_routes_lyr
+              intersect_input = projected_routes
         
         #Create intermediate outpute in same location with '_intersect' suffix
         workspace, base_name = os.path.split(output_dissolve)
@@ -317,7 +313,7 @@ class ParallelRouteLength_AnalysisTool(object):
 
         messages.addMessage("Running pairwise intersection...")
         arcpy.analysis.PairwiseIntersect(
-            [intersect_input, env_layer],
+            [intersect_input, projected_env],
             output_intersect
         )
         intersect_count = int(arcpy.management.GetCount(output_intersect)[0])
